@@ -15,8 +15,11 @@ module.exports = (io) => {
     // 定义路由
     router.post('/upload', upload.single('file'), imageController.handleImageUpload);
     router.post('/save-crop-settings-and-process', imageController.processCropAndExtract);
-    router.post('/solve-problem-with-image', imageController.solveWithImage);
     router.post('/solve-problem', problemController.solveProblem);
+    router.post('/solve-with-image', imageController.solveWithImage);
+    router.post('/solve-with-kimi', upload.none(), (req, res) => {
+        imageController.solveWithKimi(req, res);
+    });
     
     return router;
 };

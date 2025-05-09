@@ -13,7 +13,6 @@ const loadingText = document.getElementById('loading-text');
 const imageWrapper = document.getElementById('image-wrapper');
 const uploadIcon = document.querySelector('.upload-icon');
 const buttonGroup = document.querySelector('.button-group');
-const uploadButton = document.getElementById('upload-button');
 let cropper = null;
 let uploadedImageData = null;
 
@@ -61,12 +60,7 @@ socket.on('new_image_uploaded', (data) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    const uploadButton = document.getElementById('upload-button');
     const analyzeTextThenSolveButton = document.getElementById('analyze-text-then-solve-button');
-
-    uploadButton.addEventListener('click', () => {
-        // 上传图片的逻辑
-    });
 
     analyzeTextThenSolveButton.addEventListener('click', () => {
         // 分析文本并解题的逻辑
@@ -205,6 +199,8 @@ socket.on('uploading_image', () => {
     instruction.textContent = '';
 });
 
+// 删除这段无用的代码
+/*
 uploadButton.addEventListener('click', () => {
     const fileInput = document.getElementById('image-input');
     const file = fileInput.files[0];
@@ -212,9 +208,71 @@ uploadButton.addEventListener('click', () => {
         const reader = new FileReader();
         reader.onload = function (event) {
             const base64Image = event.target.result;
-            // 发送图像到服务器
             socket.emit('upload_image', base64Image);
         };
         reader.readAsDataURL(file);
     }
+});
+*/
+
+// 确保直接用图片解题按钮的事件监听器在正确位置
+solveWithImageButton.addEventListener('click', () => {
+    console.log('直接用图片解题按钮被点击');
+    if (!cropper) {
+        console.log('错误：没有图片可裁剪');
+        alert('没有图片可裁剪。');
+        return;
+    }
+
+    const cropData = cropper.getData();
+    console.log('裁剪数据:', cropData);
+    if (cropData.width <= 0 || cropData.height <= 0) {
+        console.log('错误：无效的裁剪区域');
+        alert('请选择有效的裁剪区域。');
+        return;
+    }
+
+    loadingOverlay.style.display = 'flex';
+    loadingText.textContent = '解题中...';
+
+    const cropSettings = {
+        x: cropData.x,
+        y: cropData.y,
+        width: cropData.width,
+        height: cropData.height
+    };
+    console.log('发送到服务器的数据:', { cropSettings });
+
+    fetch('/solve-with-kimi', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ cropSettings, image: uploadedImageData })
+    })
+        .then(response => {
+            console.log('服务器响应状态:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('收到服务器答案数据:', data);
+            loadingOverlay.style.display = 'none';
+            imageWrapper.style.display = 'none';
+            buttonGroup.style.display = 'none';
+
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+
+            // 显示答案
+            answerContainer.style.display = 'block';
+            answerContent.innerHTML = marked.parse(data.answer);
+            instruction.textContent = '';
+        })
+        .catch(err => {
+            console.error('解题过程出错:', err);
+            loadingOverlay.style.display = 'none';
+            alert('解题时出错，请重试。');
+        });
 });
